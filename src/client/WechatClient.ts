@@ -547,8 +547,21 @@ export class WeChatClient extends AbstractClient {
                 break
             case WxMessage.Type.MiniApp:
                 msgJson = WxMessage.getXmlToJson(msg._xml)
-                const miniProgram = await getMiniprogram(msgJson, msg)
-                messageParam.content = miniProgram
+                const miniprogramTitle = msgJson.msg.appmsg.title
+                messageParam.content = `[${MessageTypeUtils.getTypeName(msg.type() + '')}]\n${miniprogramTitle}`
+                WeChatClient.getSpyClient('botClient').sendMessage(messageParam)
+                break
+            case WxMessage.Type.VideoAccount:
+                msgJson = WxMessage.getXmlToJson(msg._xml)
+                const channelName = msgJson.msg.appmsg.finderFeed.nickname ?? ""
+                const videoTitle = msgJson.msg.appmsg.finderFeed.desc ?? ""
+                messageParam.content = `[${MessageTypeUtils.getTypeName(msg.type() + '')}]${channelName}\n${videoTitle}`
+                WeChatClient.getSpyClient('botClient').sendMessage(messageParam)
+                break
+            case WxMessage.Type.Pat:
+                msgJson = WxMessage.getXmlToJson(msg._xml)
+                const patTemplate = msgJson.sysmsg.pat.template ?? ""
+                messageParam.content = `[${patTemplate}]`
                 WeChatClient.getSpyClient('botClient').sendMessage(messageParam)
                 break
             default:
