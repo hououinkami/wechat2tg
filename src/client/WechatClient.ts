@@ -20,7 +20,7 @@ import {getGeWeChatDataSource} from '../data-sourse'
 import {ConverterHelper} from '../util/FfmpegUtils'
 import {MessageTypeUtils} from '../util/MessageTypeUtils'
 import {EmojiConverter} from '../util/EmojiUtils'
-import {getChatHistory, getMiniprogram} from '../util/handleMsg'
+import {getChatHistory, getPat} from '../util/handleMsg'
 import {WeVideo} from 'wx2tg-puppet'
 import {FileBox} from 'file-box'
 
@@ -562,8 +562,11 @@ export class WeChatClient extends AbstractClient {
                 break
             case WxMessage.Type.Pat:
                 msgJson = WxMessage.getXmlToJson(msg._xml)
-                const patTemplate = msgJson.sysmsg.pat.template ?? ""
-                messageParam.content = `[${patTemplate}]`
+                const patTemplate = msgJson.sysmsg.pat.template ?? "";
+
+                const patResult = await getPat(patTemplate);
+                
+                messageParam.content = `[${patResult}]`
                 WeChatClient.getSpyClient('botClient').sendMessage(messageParam)
                 break
             default:

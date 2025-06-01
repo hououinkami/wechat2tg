@@ -29,6 +29,7 @@ import {BindGroup} from '../entity/BindGroup'
 import {WxRoomRepository} from '../repository/WxRoomRepository'
 import {WeChatClient} from './WechatClient'
 import {SpeechService} from '../service/SpeechService'
+import {wechatAPI} from '../util/handleMsg'
 
 export class TelegramBotClient extends AbstractClient {
     async login(): Promise<boolean> {
@@ -583,7 +584,46 @@ export class TelegramBotClient extends AbstractClient {
     onMessage(bot: Telegraf) {
         bot.on(message('text'), async ctx => {
             // 识别文本类型
-            const text = ctx.message.text
+            // const text = ctx.message.text
+
+            // 处理链接信息
+            let text
+            let isUrl = false
+            let linkTitle
+            let linkUrl
+            let linkDesc
+            text = ctx.message.text
+            if (ctx.message && 'entities' in ctx.message) {
+                const msgEntities = ctx.message.entities as any[]
+                if (msgEntities && msgEntities.length > 0) {
+                    let entity = msgEntities[0]
+                    for (const item of msgEntities) {
+                        // 只处理第一个链接
+                        if (item.type === 'text_link' || item.type === 'url') {
+                            entity = item
+                            break
+                        }
+                    }
+                    if (entity.type === 'text_link' && entity.url) {
+                        linkTitle = ctx.message.text
+                        linkUrl = entity.url
+                        linkDesc = ''
+                    } else if (entity.type === 'url') {
+                        linkTitle = '非公众号链接'
+                        linkUrl = ctx.message.text.substring(
+                            entity.offset,
+                            entity.offset + entity.length
+                        )
+                        linkDesc = linkUrl
+                    }
+
+                    if (linkTitle && linkUrl) {
+                        text = `<appmsg><title>${linkTitle}</title><des>${linkDesc}</des><type>5</type><url>${linkUrl}</url><thumburl></thumburl></appmsg>`
+                    }
+                }
+                isUrl = true
+            }
+
             // 处理完毕
             const messageId = ctx.message.message_id
             const chatId = ctx.chat.id
@@ -601,6 +641,22 @@ export class TelegramBotClient extends AbstractClient {
             if (typeof text === 'string' && text.startsWith('/')) {
                 return
             }
+
+            // 发送链接信息
+            if (isUrl) {
+                try {
+                    const response = await wechatAPI('/Msg/SendApp', {
+                        "ToWxid": exist.wxId,
+                        "Type": 49,
+                        "Wxid": config.MY_WXID,
+                        "Xml": text
+                    });
+                    return response.data;
+                } catch (error) {
+                    throw error;
+                }
+            }
+
             const message: BaseMessage = {
                 id: messageId + '',
                 senderId: '',
