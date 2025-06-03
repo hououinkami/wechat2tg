@@ -10,16 +10,16 @@ export async function getChatHistory(
 ): Promise<string> {
   try {
     // 获取标题
-    const title = recordJson.msg.appmsg.title;
-    // const title = `[${MessageTypeUtils.getTypeName(msg.type() + '')}]`;
+    // const title = recordJson.recordinfo.title;
+    const title = `[${MessageTypeUtils.getTypeName(msg.type() + '')}]`;
     // 获取条数
     const itemCount = recordJson.recordinfo.datalist.count;
     // 获取第一项的日期
-    const firstItemDate = recordJson.recordinfo.datalist.dataitem[0].sourcetime.split(' ')[0].replace(/-/g, '/');
+    const firstItemDate = htmlDecode(recordJson.recordinfo.datalist.dataitem[0].sourcetime).split(' ')[0].replace(/-/g, '/');
     // 获取最后一项的日期
     const datalistLength = recordJson.recordinfo.datalist.dataitem.length;
     const lastIndex = datalistLength - 1;
-    const lastItemDate = recordJson.recordinfo.datalist.dataitem[lastIndex].sourcetime.split(' ')[0].replace(/-/g, '/');
+    const lastItemDate = htmlDecode(recordJson.recordinfo.datalist.dataitem[lastIndex].sourcetime).split(' ')[0].replace(/-/g, '/');
     let titleDate = firstItemDate;
     let multiDays = false;
     if (firstItemDate !== lastItemDate) {
@@ -54,7 +54,7 @@ export async function getChatHistory(
         chatContent = `[${dataTypeName || "不明"}]`
       }
       // 正确解析时间
-      const timestamp = item.sourcetime;
+      const timestamp = htmlDecode(item.sourcetime);
       const { date, time } = await formatTime(timestamp);
       
       let chatTime = time;
@@ -89,7 +89,7 @@ export async function getChatHistory(
     return htmlText;
     
   } catch (error) {
-    console.error('チャット履歴処理エラー:', error);
+    console.error('处理聊天记录出错:', error);
     return `[${MessageTypeUtils.getTypeName(msg.type() + '')}]`;
   }
 }
@@ -147,6 +147,22 @@ async function formatTime(timestamp: string) {
     date,
     time
   };
+}
+
+// HTML解码
+function htmlDecode(str: string): string {
+  const map: { [key: string]: string } = {
+    '&#x20;': ' ',
+    '&nbsp;': ' ',
+    '&amp;': '&',
+    '&lt;': '<',
+    '&gt;': '>',
+    '&quot;': '"',
+    '&#x27;': "'",
+    // 可以根据需要添加更多实体
+  };
+  
+  return str.replace(/&#x20;|&nbsp;|&amp;|&lt;|&gt;|&quot;|&#x27;/g, (match) => map[match]);
 }
 
 // 通用API请求函数
